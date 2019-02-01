@@ -7,12 +7,23 @@ import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 public class WebServer extends NanoHTTPD {
-	 public <T> WebServer(int port) throws IOException {
+	 public <T> WebServer(int port, T instance) throws IOException {
          super(port);
+         
+         
+         
          start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
          System.out.println("\nRunning! Point your browsers to http://localhost:8080/ \n");
      }
- 
+	 
+	 private <T> void processAnnotation(T instance) {
+		 java.lang.reflect.Method[] methods = instance.getClass().getDeclaredMethods();
+		 
+		 for(java.lang.reflect.Method method: methods) {
+			 
+		 }
+	 }
+	 
      @Override
      public Response serve(IHTTPSession session) {
          String msg = "<html><body><h1>Hello server</h1>\n";
