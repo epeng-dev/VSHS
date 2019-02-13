@@ -7,10 +7,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import fi.iki.elonen.NanoHTTPD.Method;
+
 @Inherited
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface GETRequest {
+public @interface RequestMapping {
 	String url();
+	Method method();
 }

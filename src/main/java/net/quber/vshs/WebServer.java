@@ -1,41 +1,93 @@
 package net.quber.vshs;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 public class WebServer extends NanoHTTPD {
-	 public <T> WebServer(int port, T instance) throws IOException {
-         super(port);
-         
-         
-         
-         start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-         System.out.println("\nRunning! Point your browsers to http://localhost:8080/ \n");
-     }
-	 
-	 private <T> void processAnnotation(T instance) {
-		 java.lang.reflect.Method[] methods = instance.getClass().getDeclaredMethods();
-		 
-		 for(java.lang.reflect.Method method: methods) {
-			 
-		 }
-	 }
-	 
-     @Override
-     public Response serve(IHTTPSession session) {
-         String msg = "<html><body><h1>Hello server</h1>\n";
-         Map<String, String> parms = session.getParms();
-         
-         System.out.println("URL: " + session.getUri());
-         if (parms.get("username") == null) {
-             msg += "<form action='?' method='get'>\n  <p>Your name: <input type='text' name='username'></p>\n" + "</form>\n";
-         } else {
-             msg += "<p>Hello, " + parms.get("username") + "!</p>";
-         }
-         
-         return newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_HTML, msg + "</body></html>\n");
-     }
+	private HashMap<String, java.lang.reflect.Method> mGetMap = new HashMap();
+	private HashMap<String, java.lang.reflect.Method> mPostMap = new HashMap();
+	private Object mControllerInstance;
+
+	public WebServer(int port, Class<?> instance) throws IOException {
+		super(port);
+		try {
+			mControllerInstance = instance.newInstance();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		processAnnotation(mControllerInstance);
+		start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+		System.out.println("\nRunning! Point your browsers to http://localhost:8080/ \n");
+	}
+
+	private <T> void processAnnotation(T instance) {
+		java.lang.reflect.Method[] methods = instance.getClass().getDeclaredMethods();
+			
+		for (java.lang.reflect.Method method : methods) {
+			System.out.println("Method: " + method);
+			RequestMapping annotation = method.getAnnotation(RequestMapping.class);
+			if (annotation != null) {
+				String url = annotation.url();
+				if (url.charAt(url.length() - 1) != '/') {
+					url = url + "/";
+				}
+
+				if (annotation.method() == Method.POST) {
+					System.out.println("URL: " + url + " Method: POST");
+					mPostMap.put(url, method);
+				} else {
+					System.out.println("URL: " + url + " Method: GET");
+					mGetMap.put(url, method);
+				}
+			}
+		}
+	}
+
+	@Override
+	public Response serve(IHTTPSession session) {
+		Map<String, String> parms = session.getParms();
+		
+		String url = session.getUri();
+		if (url.charAt(url.length() - 1) != '/') {
+			url = url + "/";
+		}
+		System.out.println("URL: " + url);
+		
+		java.lang.reflect.Method method;
+		if (session.getMethod() == Method.POST) {
+			method = mPostMap.get(session.getUri());
+		} else {
+			System.out.println("GET");
+			method = mGetMap.get(session.getUri());
+		}
+
+		if (method == null) {
+			return newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_HTML, "NOT FOUND");
+		}
+
+		Response response = newFixedLengthResponse(Status.INTERNAL_ERROR, NanoHTTPD.MIME_HTML, "INTERNAL ERROR!!!");
+		try {
+			response = (Response) method.invoke(mControllerInstance, session);
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		}
+
+		return response;
+	}
+	
+	
 }
