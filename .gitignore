@@ -1,0 +1,13 @@
+*.class
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
+*.jar
+.classpath
+.project
+.settings/
+target/
